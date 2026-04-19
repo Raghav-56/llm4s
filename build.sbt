@@ -140,7 +140,7 @@ lazy val llm4s = (project in file("."))
 
 lazy val core = (project in file("modules/core"))
   .settings(
-    name := "llm4s-core",
+    name := "core",
     commonSettings,
     Test / fork := true,
     Test / javaOptions ++= Seq(
@@ -259,7 +259,8 @@ lazy val samples = (project in file("modules//samples"))
     name := "samples",
     commonSettings,
     publish / skip := true,
-    coverageEnabled := false
+    coverageEnabled := false,
+    libraryDependencies += Deps.termflow
   )
 
 lazy val workspaceSamples = (project in file("modules/workspace/workspaceSamples"))
@@ -274,7 +275,7 @@ lazy val workspaceSamples = (project in file("modules/workspace/workspaceSamples
 lazy val traceOpentelemetry = (project in file("modules/trace-opentelemetry"))
   .dependsOn(core)
   .settings(
-    name := "llm4s-trace-opentelemetry",
+    name := "trace-opentelemetry",
     commonSettings,
     libraryDependencies ++= Seq(
       Deps.opentelemetryApi,
@@ -286,7 +287,7 @@ lazy val traceOpentelemetry = (project in file("modules/trace-opentelemetry"))
 lazy val knowledgegraphNeo4j = (project in file("modules/knowledgegraph-neo4j"))
   .dependsOn(core)
   .settings(
-    name             := "llm4s-knowledgegraph-neo4j",
+    name             := "knowledgegraph-neo4j",
     commonSettings,
     Test / fork      := true,
     libraryDependencies ++= Seq(

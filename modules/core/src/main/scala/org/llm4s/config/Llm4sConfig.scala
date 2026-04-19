@@ -1,10 +1,11 @@
 package org.llm4s.config
 
 import org.llm4s.llmconnect.ProviderExchangeLogging
-import org.llm4s.llmconnect.config._
+import org.llm4s.llmconnect.config.*
 import org.llm4s.metrics.{ MetricsCollector, PrometheusEndpoint }
 import org.llm4s.types.Result
 import org.llm4s.config.ProvidersConfigModel.{ ProviderName, ProvidersConfig }
+import org.llm4s.error.LLMError
 import org.llm4s.http.Llm4sHttpClient
 import pureconfig.ConfigSource
 
@@ -17,15 +18,12 @@ import pureconfig.ConfigSource
  * `System.getenv`, or `ConfigFactory.load()` directly.
  *
  * == Provider setup ==
- * Either:
+ * Define named providers under `llm4s.providers.<name>` and optionally set
+ * `llm4s.providers.provider` to choose the default provider. Then call
+ * [[defaultProvider]] or resolve a named provider directly with
+ * [[provider(name)*]].
  *
- *  - Set `LLM_MODEL` to `provider/model` (e.g. `"openai/gpt-4o"`,
- *    `"anthropic/claude-sonnet-4-5-latest"`, `"gemini/gemini-2.0-flash"`) and
- *    the corresponding provider settings, or
- *  - Resolve a named configured provider directly with [[provider(name)*]] from
- *    `llm4s.providers.<name>`.
- *
- * Then call [[provider]] to obtain a
+ * Then call [[defaultProvider]] to obtain a
  * [[org.llm4s.llmconnect.config.ProviderConfig]] ready for
  * [[org.llm4s.llmconnect.LLMConnect.getClient]]. Apps that need multiple
  * configured providers can call [[provider(name)*]] directly.
@@ -33,7 +31,7 @@ import pureconfig.ConfigSource
  * @example
  * {{{
  * for {
- *   cfg    <- Llm4sConfig.provider()
+ *   cfg    <- Llm4sConfig.defaultProvider()
  *   client <- LLMConnect.getClient(cfg)
  *   agent  = new Agent(client)
  *   state  <- agent.run("Hello", ToolRegistry.empty)
@@ -46,23 +44,6 @@ import pureconfig.ConfigSource
 object Llm4sConfig {
 
   /**
-   * Loads LLM provider configuration from the current environment.
-   *
-   * Reads `LLM_MODEL` / `llm4s.llm.model` (format: `provider/model`) plus the
-   * matching credential variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
-   * for the current single-provider path.
-   *
-   * @return the provider configuration, or a
-   *         [[org.llm4s.error.ConfigurationError]] when required variables are
-   *         missing or the provider prefix is unrecognised.
-   */
-  def provider(): Result[ProviderConfig] =
-    org.llm4s.config.ProviderConfigLoader.load(ConfigSource.default)
-
-  private[config] def provider(source: ConfigSource): Result[ProviderConfig] =
-    org.llm4s.config.ProviderConfigLoader.load(source)
-
-  /**
    * Loads a named provider from `llm4s.providers.<name>`.
    *
    * Useful for applications that need to resolve multiple configured provider
@@ -70,6 +51,14 @@ object Llm4sConfig {
    */
   def provider(name: String): Result[ProviderConfig] =
     org.llm4s.config.NamedProviderLoader.load(ConfigSource.default, name)
+
+  def providerConfigs(): Result[(Map[ProviderName, LLMError], Map[ProviderName, ProviderConfig])] =
+    org.llm4s.config.NamedProviderLoader.loadProviderConfigs(ConfigSource.default)
+
+  def providerConfigs(
+    map: Map[ProviderName, ProvidersConfigModel.NamedProviderConfig]
+  ): (Map[ProviderName, LLMError], Map[ProviderName, ProviderConfig]) =
+    org.llm4s.config.NamedProviderLoader.getProviderConfigs(map)
 
   private[config] def provider(source: ConfigSource, name: String): Result[ProviderConfig] =
     org.llm4s.config.NamedProviderLoader.load(source, name)
